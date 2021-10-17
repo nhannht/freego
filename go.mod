@@ -1,4 +1,4 @@
-module freego
+module github.com/nhannht/freego
 
 go 1.17
 
