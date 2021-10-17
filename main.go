@@ -1,11 +1,11 @@
 package main
 
 import (
-	"freego/service"
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucasb-eyer/go-colorful"
+	"github.com/nhannht/freego/service"
 	"log"
 	"time"
 )
@@ -26,8 +26,8 @@ func (m model) View() string {
 	cpuInfo := lipgloss.NewStyle().Foreground(lipgloss.Color(
 		colorful.HappyColor().Hex(),
 	)).Render("Cpu: ")
-	mem := m.memProgress.ViewAs(m.mem.Percent())
-	cpu := m.cpuProgress.ViewAs(m.cpu.CpuPercent())
+	mem := m.memProgress.View()
+	cpu := m.cpuProgress.View()
 	out := memInfoText + "\n" + mem + "\n" + cpuInfo + "\n" + cpu + "\n" + quitInfoText
 	outWithStyle := borderStyle.Render(out)
 
@@ -84,10 +84,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case memTickMsg:
 		m.mem.UpdateMemory()
 		m.cpu.UpdateCpu()
-		return m, memTickFunc()
-	//case cpuTickMsg:
-	//	m.cpu.UpdateCpu()
-	//	return m,cpuTickFunc()
+		memCmd := m.memProgress.SetPercent(m.mem.Percent())
+		cpuCmd := m.cpuProgress.SetPercent(m.cpu.CpuPercent())
+		return m, tea.Batch(
+			memTickFunc(),
+			memCmd,
+			cpuCmd,
+		)
+
+	case progress.FrameMsg:
+		cpuProgressNewModel, newCmdCpu := m.cpuProgress.Update(msg)
+		m.cpuProgress = cpuProgressNewModel.(progress.Model)
+		memProgressNewModel, newCmdMem := m.memProgress.Update(msg)
+		m.memProgress = memProgressNewModel.(progress.Model)
+		return m, tea.Batch(
+			newCmdMem,
+			newCmdCpu,
+		)
 	default:
 		return m, nil
 	}
